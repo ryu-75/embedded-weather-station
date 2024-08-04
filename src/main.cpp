@@ -25,6 +25,13 @@ string get_pressure(int pressure) {
   return std::to_string(pressure) + " hPa";
 }
 
+string get_relative_humidity(double humidity) {
+  oled.setCursor(5, 28);
+  oled.setTextSize(1);
+  oled.setTextColor(WHITE);
+  return std::to_string(humidity) + " %";
+}
+
 void setup() {
   Serial.begin(9600);
   WiFi.begin(ssid, password);
@@ -47,8 +54,8 @@ void setup() {
     while (1);
   }
 
-  pinMode(LED_BUILTIN, OUTPUT);
   timeClient.begin();
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 int frame = 0;
@@ -57,40 +64,64 @@ unsigned long previousTime = 0;
 
 void loop() {
   currentTime = millis();
-
+  
   if ((currentTime - previousTime) >= FRAME_DELAY) {
+    float temperature = bmp.readTemperature();
+    int pressure = bmp.readSealevelPressure() / 100;
+    
     timeClient.update();
     previousTime = currentTime;
     frame++;
-
-    float temperature = bmp.readTemperature();
-    int pressure = bmp.readSealevelPressure() / 100;
-
     setTime();
-
     BitmapType type = setBitmapEnum(pressure);
     const byte* const bitmap = setBitmap(type, frame);
-
     if (!temperature) {
       Serial.println("Could not read temperature from BMP");
       light_error();
       return ;
     }
-
     if (!pressure) {
       Serial.println("Could not read pressure from BMP");
       light_error();
       return ;
     }
 
+    sendData(temperature, pressure);
+
     oled.clearDisplay();
     oled.println(get_temp(temperature).c_str());
     oled.println(get_pressure(pressure).c_str());
-
     displayTime();
-
     oled.drawBitmap(80, 12, bitmap, FRAME_WIDTH, FRAME_HEIGHT, 1);
     oled.display();
+  } 
+}
+
+void  sendData(float temperature, int pressure) {
+  if (WiFi.status() == WL_CONNECTED) {  
+    WiFiClient  wifiClient;
+    HTTPClient  http;
+
+    http.begin(wifiClient, "http://192.168.1.30:3000/weather");
+    http.addHeader("content-type", "application/json");
+    http.addHeader("Accept", "application/json");
+    
+    String  data = "{\"temperature\": " + String(temperature, 2) + ", \"pressure\": " + String(pressure) + "}" ;
+    
+    Serial.print("Data to send: ");
+    Serial.println(data);
+    
+    int httpResponseCode = http.POST(data);
+    
+    if (httpResponseCode > 0) {
+      String  response = http.getString();
+      Serial.println(httpResponseCode);
+      Serial.println(response);
+    } else {
+      Serial.println("Error on sending POST");
+      Serial.println(httpResponseCode);
+    }
+    http.end();
   }
 }
 

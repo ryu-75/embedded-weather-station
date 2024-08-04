@@ -1,18 +1,24 @@
 #ifndef MAIN_HPP 
 #define MAIN_HPP
 
+#include <Adafruit_BMP085.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_Sensor.h>
+#include <Arduino.h>
+
+#include <Ticker.h>
+
+#include <NTPClient.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiUdp.h>
+// C++ libraries
+#include <iostream>
 #include <chrono>
 #include <thread>
 #include <string>
-#include <Arduino.h>
-#include <Adafruit_BMP085.h>
-#include <iostream>
 #include <bits/stdc++.h>
 #include <cmath>
-#include <NTPClient.h>
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
-#include <Adafruit_SSD1306.h>
 
 // OLED Screen
 #define nombreDePixelsEnLargeur 128         // Taille de l'écran OLED, en pixel, au niveau de sa largeur
@@ -62,5 +68,6 @@ string  get_temp(float temperature);
 string  get_pressure(int pressure);
 void    displayTime();
 void    light_error();
+void  sendData(float temperature, int pressure);
 
 #endif
