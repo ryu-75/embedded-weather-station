@@ -59,15 +59,18 @@ void setup() {
 }
 
 int frame = 0;
+
 unsigned long currentTime = 0;
 unsigned long previousTime = 0;
 
+unsigned long limitedDataTime = 0;
+unsigned long limitedDataDuration = (60 * 1000);
 void loop() {
   currentTime = millis();
+  float temperature = bmp.readTemperature();
+  int pressure = bmp.readSealevelPressure() / 100;
   
   if ((currentTime - previousTime) >= FRAME_DELAY) {
-    float temperature = bmp.readTemperature();
-    int pressure = bmp.readSealevelPressure() / 100;
     
     timeClient.update();
     previousTime = currentTime;
@@ -86,8 +89,6 @@ void loop() {
       return ;
     }
 
-    sendData(temperature, pressure);
-
     oled.clearDisplay();
     oled.println(get_temp(temperature).c_str());
     oled.println(get_pressure(pressure).c_str());
@@ -95,6 +96,11 @@ void loop() {
     oled.drawBitmap(80, 12, bitmap, FRAME_WIDTH, FRAME_HEIGHT, 1);
     oled.display();
   } 
+
+  if ((currentTime - limitedDataTime) >= limitedDataDuration) {
+    limitedDataTime = currentTime;
+    sendData(temperature, pressure);
+  }
 }
 
 void  sendData(float temperature, int pressure) {
@@ -112,7 +118,6 @@ void  sendData(float temperature, int pressure) {
     Serial.println(data);
     
     int httpResponseCode = http.POST(data);
-    
     if (httpResponseCode > 0) {
       String  response = http.getString();
       Serial.println(httpResponseCode);
